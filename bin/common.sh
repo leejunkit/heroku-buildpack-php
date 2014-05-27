@@ -45,7 +45,9 @@ init_log_plex_fifo() {
 
 init_papertrail_log_plex_fifo() {
   for log_file in $*; do
-    echo "mkfifo ${log_file}.papertrail"
+    # todo: activate once non-fife papertrail logging is confirmed to work
+    echo "touch ${log_file}.papertrail"
+    echo "#mkfifo ${log_file}.papertrail"
     # make sure that php-fpm can write and read to/from the log fifos (user = nobody)
     echo "chown nobody: ${log_file}"
     echo "chown nobody: ${log_file}.papertrail"
