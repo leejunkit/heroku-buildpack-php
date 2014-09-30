@@ -75,10 +75,6 @@ http {
         #Specify a charset
         charset utf-8;
 
-        if ($http_user_agent ~* "NewRelicPinger") {
-          access_log off;
-        }
-
         include site.conf;
 
         <% Shellwords.split(ENV['NGINX_INCLUDES'].to_s).each do |f| %>
