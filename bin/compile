@@ -110,6 +110,11 @@ function install_composer_deps() {
 
     php "vendor/composer/bin/composer.phar" self-update
 
+    if [ -n "$COMPOSER_GITHUB_TOKEN" ]; then
+        status "Configuring the github authentication for Composer"
+        php "vendor/composer/bin/composer.phar" config -g github-oauth.github.com "$COMPOSER_GITHUB_TOKEN" --no-interaction
+    fi
+
     status "Installing application dependencies with Composer"
     {
         cd "$target"
@@ -237,6 +242,16 @@ function package_newrelic_enabled() {
     fi
 }
 
+function package_papertrail_enabled() {
+    local val=$(jq --raw-output '.extra.heroku["papertrail"] // false' < "$BUILD_DIR/composer.json")
+
+    if [ "$val" = "true" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 export_env_dir "$3"
 
 # Download jq binary for JSON processing
@@ -339,6 +354,10 @@ if [ -f "$BUILD_DIR/composer.json" ] && package_newrelic_enabled; then
     install_newrelic "$NEWRELIC_VERSION"
 fi
 
+if [ -n "$PAPERTRAIL_PORT" ] && package_papertrail_enabled; then
+    gem install remote_syslog
+fi
+
 if [ -n "$BUILDPACK_DEBUG" ]; then
     ls -R /app/vendor/nginx
     ls -R /app/vendor/php
@@ -438,7 +457,20 @@ erb conf/nginx.conf.erb > /app/vendor/nginx/conf/nginx.conf
 erb conf/site.conf.erb > /app/vendor/nginx/conf/site.conf
 
 `init_log_plex_fifo ${LOG_FILES}`
-`tail_log_plex ${LOG_FILES} ${SYS_LOG_FILES}`
+
+if [ -n "\$PAPERTRAIL_PORT" ]; then
+    echo "*.*          @logs.papertrailapp.com:$PAPERTRAIL_PORT" > /etc/rsyslog.d/papertrail.conf
+    service rsyslog restart
+    `init_papertrail_log_plex_fifo ${LOG_FILES}`
+    `cat_papertrail_log_plex ${LOG_FILES} ${SYS_LOG_FILES}`
+    (
+        exec remote_syslog -c logs.yml -p $PAPERTRAIL_PORT -d logs.papertrailapp.com
+        \$pmsgr < "remote_syslog"
+    )&
+
+else
+    `cat_log_plex ${LOG_FILES} ${SYS_LOG_FILES}`
+fi
 
 (
     exec php-fpm -p "/app/vendor/php"

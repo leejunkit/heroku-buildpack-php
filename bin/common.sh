@@ -38,7 +38,17 @@ init_log_plex_fifo() {
     echo "mkdir -p `dirname ${log_file}`"
   done
   for log_file in $*; do
+    echo "rm -f ${log_file}"
     echo "mkfifo ${log_file}"
+  done
+}
+
+init_papertrail_log_plex_fifo() {
+  for log_file in $*; do
+    echo "mkfifo ${log_file}.papertrail"
+    # make sure that php-fpm can write and read to/from the log fifos (user = nobody)
+    echo "chown nobody: ${log_file}"
+    echo "chown nobody: ${log_file}.papertrail"
   done
 }
 
@@ -56,3 +66,18 @@ tail_log_plex() {
     echo "tail -n 0 -qF --pid=\$\$ ${log_file} &"
   done
 }
+
+cat_log_plex() {
+  for log_file in $*; do
+    echo "cat ${log_file} &"
+  done
+}
+
+cat_papertrail_log_plex() {
+  echo "echo \"files:\" > logs.yml"
+  for log_file in $*; do
+    echo "cat ${log_file} | tee ${log_file}.papertrail &"
+    echo "echo \" - ${log_file}.papertrail\" >> logs.yml"
+  done
+}
+

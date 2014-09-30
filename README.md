@@ -7,7 +7,7 @@
 * Uses the memory of the dyno more efficiently by going with NGINX and PHP-FPM.
 * Supports Composer out of the box
 * No writing NGINX configuration files: supports CakePHP, Classic PHP applications, Magento, Silex, Slim, Symfony 2 and ZF2 apps with simple configuration driven by your `composer.json`.
-* Zero-Configuration Symfony 2 deployment.
+* Zero-Configuration Symfony 2 and Yii 1 deployment.
 * Dynamic installing of [supported extensions](support/ext) listed as `ext-` requirments in `composer.json`.
 
 ## How to use it
@@ -113,6 +113,19 @@ This framework preset doesn't need any configuration to work.
 
 Please note that if you use config vars in Composer hooks, or in `compile`
 scripts, then a new code push may be necessary if you decide to change a config variable.
+
+### Yii 1
+
+Is detected when the app requires the `yiisoft/yii` package or when the
+`framework` setting is set to `yii` in the `composer.json`.
+
+This framework preset doesn't need any configuration to work.
+
+Options:
+
+* `index-document`: All requests which don't match an existing file will be forwarded to
+  this document. Defaults to `index.php`. With Yii apps, this can be set to `index-test.php`
+  for deployments used for acceptance testing.
 
 ## Extensions
 
@@ -329,6 +342,18 @@ A minimal `package.json` file with less will look like this :
 
 Node and its modules will be available at compilation meaning you could process nodejs script at that time.
 
+## Authenticating Composer calls on the Github API
+
+Unauthenticated calls to the Github API are subject to a low rate limit. This includes calls to the download endpoint
+which is attempted by default during the Composer call because archives can be cached between deployments.
+
+The buildpack supports using authenticated API calls with Composer:
+
+- Create a personal API token on Github. You can [read more on this](https://github.com/blog/1509-personal-api-tokens).
+  The token should have the minimal permissions needed by your project. If your project only relies on public
+  Github repositories for its dependencies, the best choice is to restrict it to the "public access" permissions.
+- Set your token as the "COMPOSER_GITHUB_TOKEN" config variable in your heroku application. Any new deployment
+  will use it to authenticate the composer calls.
 
 ## Contributing
 
